@@ -1,20 +1,41 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --foreground-rgb: 17, 24, 39;
-  --background-rgb: 255, 255, 255;
+/* Design tokens — Tailwind v4 reads these from @theme (not tailwind.config.ts) */
+@theme {
+  --color-background: #ffffff;
+  --color-workspace: #fafbfc;
+  --color-foreground: #111827;
+  --color-secondary: #64748b;
+  --color-border: #e5eaf0;
+  --color-accent: #2563eb;
+  --color-accent-foreground: #ffffff;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+
+  --radius-card: 12px;
+  --radius-input: 8px;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background-color: #ffffff;
+  color: #111827;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
   font-feature-settings: "rlig" 1, "calt" 1;
 }
 
-@layer components {
-  .glass-panel {
-    @apply bg-white/80 backdrop-blur-md border border-border;
-  }
+/* Plain CSS — avoid @apply so the CSS language server stays quiet */
+.glass-panel {
+  background-color: rgb(255 255 255 / 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
 }

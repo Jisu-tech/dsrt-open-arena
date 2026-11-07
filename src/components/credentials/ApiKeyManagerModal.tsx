@@ -1,46 +1,108 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { Loader2, Trash2, ExternalLink, KeyRound, Check } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Key, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
-import { ProviderType } from '@/lib/providers/registry';
+import {
+  PROVIDER_METADATA,
+  type ProviderType,
+} from '@/lib/providers/registry';
+import type { CredentialItem } from '@/types';
 
-interface CredentialItem {
-  id: string;
-  provider: ProviderType;
-  key_mask: string;
-  status: 'ACTIVE' | 'INVALID';
-  last_validated_at: string;
-}
-
-interface ApiKeyManagerModalProps {
-  isOpen: boolean;
+type Props = {
+  open: boolean;
   onClose: () => void;
-  workspaceId: string;
-  credentials: CredentialItem[];
-  onRefreshCredentials: () => void;
-}
+  workspaceId: string | null;
+  onCredentialsChanged?: (providers: ProviderType[]) => void;
+};
 
 export function ApiKeyManagerModal({
-  isOpen,
+  open,
   onClose,
   workspaceId,
-  credentials,
-  onRefreshCredentials,
-}: ApiKeyManagerModalProps) {
+  onCredentialsChanged,
+}: Props) {
+  const [credentials, setCredentials] = useState<CredentialItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [provider, setProvider] = useState<ProviderType>('openai');
   const [apiKey, setApiKey] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSaveKey = async (e: React.FormEvent) => {
+  const providerIds = Object.keys(PROVIDER_METADATA) as ProviderType[];
+
+  const configuredProviders = useMemo<ProviderType[]>(
+    () =>
+      Array.from(
+        new Set(
+          credentials
+            .filter(
+              (c) =>
+                String(c.status).toLowerCase() === 'active' ||
+                String(c.status).toLowerCase() === 'valid'
+            )
+            .map((c) => c.provider as ProviderType)
+        )
+      ),
+    [credentials]
+  );
+
+  useEffect(() => {
+    onCredentialsChanged?.(configuredProviders);
+  }, [configuredProviders, onCredentialsChanged]);
+
+  const loadCredentials = useCallback(async () => {
+    if (!workspaceId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/credentials?workspace_id=${workspaceId}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          (data as { error?: string }).error || 'Failed to load credentials'
+        );
+      }
+      const data = await res.json();
+      setCredentials(data.credentials || []);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load credentials');
+    } finally {
+      setLoading(false);
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!open || !workspaceId) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        void loadCredentials();
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, workspaceId, loadCredentials]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!apiKey.trim()) return;
+    if (!workspaceId) {
+      setError('No workspace selected');
+      return;
+    }
+    if (!apiKey.trim()) {
+      setError('API key is required');
+      return;
+    }
 
-    setIsSubmitting(true);
-    setErrorMsg(null);
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
 
     try {
       const res = await fetch('/api/v1/credentials', {
@@ -53,111 +115,200 @@ export function ApiKeyManagerModal({
         }),
       });
 
-      const data = await res.json();
-
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to save credential');
+        throw new Error((data as { error?: string }).error || 'Validation or save failed');
       }
 
       setApiKey('');
-      onRefreshCredentials();
-    } catch (err: any) {
-      setErrorMsg(err.message);
+      setSuccess(`${PROVIDER_METADATA[provider].name} key saved and validated`);
+      await loadCredentials();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (
+      !confirm(
+        'Remove this API key? Conversations stay intact; you can add a new key later.'
+      )
+    ) {
+      return;
+    }
+    setError(null);
     try {
       const res = await fetch(`/api/v1/credentials/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        onRefreshCredentials();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error || 'Delete failed');
       }
-    } catch (err) {
-      console.error(err);
+      setCredentials((prev) => prev.filter((c) => c.id !== id));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
     }
   };
 
+  const meta = PROVIDER_METADATA[provider];
+  const isActive = (status: string) =>
+    status === 'active' || status === 'valid' || status === 'VALID' || status === 'ACTIVE';
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Provider Credentials Manager">
+    <Modal isOpen={open} onClose={onClose} title="API Keys">
       <div className="space-y-6">
-        <p className="text-xs text-secondary leading-relaxed">
-          API keys are encrypted using AES-256-GCM before storage. Only masked tokens are returned to your browser.
-        </p>
+        {!workspaceId && (
+          <div className="text-xs text-warning bg-amber-50 border border-amber-200 rounded-input px-3 py-2">
+            No workspace selected. Complete sign-in and wait for your personal workspace
+            to load.
+          </div>
+        )}
 
-        {/* Existing Credentials */}
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-secondary uppercase tracking-wider">Active Credentials</label>
-          {credentials.length === 0 ? (
-            <div className="p-3 border border-dashed border-border rounded-input text-xs text-secondary text-center">
-              No API keys configured yet. Add your OpenAI, Anthropic, or Google keys below.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {credentials.map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-3 border border-border rounded-input bg-workspace text-xs">
-                  <div className="flex items-center gap-2">
-                    <Key size={14} className="text-accent" />
-                    <span className="font-semibold uppercase">{c.provider}</span>
-                    <span className="font-mono text-secondary">{c.key_mask}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={c.status === 'ACTIVE' ? 'success' : 'error'}>
-                      {c.status}
-                    </Badge>
-                    <button
-                      onClick={() => handleDelete(c.id)}
-                      className="text-secondary hover:text-error transition-colors p-1"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Form to add key */}
-        <form onSubmit={handleSaveKey} className="space-y-4 pt-2 border-t border-border">
-          {errorMsg && (
-            <div className="p-3 bg-red-50 border border-red-200 text-error rounded-input text-xs flex items-center gap-2">
-              <AlertCircle size={14} className="shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+        <form
+          onSubmit={handleSave}
+          className="space-y-3 border border-border rounded-card p-4"
+        >
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <KeyRound size={16} className="text-accent" />
+            Add provider key
+          </div>
 
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1">Provider</label>
+            <label className="block text-xs font-medium text-secondary mb-1">
+              Provider
+            </label>
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value as ProviderType)}
-              className="w-full h-9 px-3 rounded-input border border-border bg-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent"
+              className="w-full px-3 py-2 rounded-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              disabled={!workspaceId || saving}
             >
-              <option value="openai">OpenAI</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="google">Google Gemini</option>
-              <option value="deepseek">DeepSeek</option>
+              {providerIds.map((p) => {
+                const configured = configuredProviders.includes(p);
+                return (
+                  <option key={p} value={p}>
+                    {configured ? '● ' : '○ '}
+                    {PROVIDER_METADATA[p].name}
+                    {configured ? ' (configured)' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1">API Secret Key</label>
+            <label className="block text-xs font-medium text-secondary mb-1">
+              API key
+            </label>
             <input
               type="password"
-              placeholder="sk-..."
+              autoComplete="off"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              className="w-full h-9 px-3 rounded-input border border-border font-mono text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+              placeholder="sk-… (never stored in the browser after save)"
+              className="w-full px-3 py-2 rounded-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
+              disabled={!workspaceId || saving}
               required
             />
           </div>
 
-          <Button type="submit" isLoading={isSubmitting} className="w-full">
-            <CheckCircle size={14} className="mr-2" /> Validate & Save Key
+          {meta?.docsUrl && (
+            <a
+              href={meta.docsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-accent hover:underline"
+            >
+              Provider docs <ExternalLink size={12} />
+            </a>
+          )}
+
+          {error && (
+            <div className="text-xs text-error bg-red-50 border border-red-200 rounded-input px-3 py-2">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="text-xs text-success bg-emerald-50 border border-emerald-200 rounded-input px-3 py-2">
+              {success}
+            </div>
+          )}
+
+          <Button type="submit" disabled={!workspaceId || saving || !apiKey.trim()}>
+            {saving ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> Validating…
+              </>
+            ) : (
+              'Validate & save'
+            )}
           </Button>
         </form>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-medium text-secondary uppercase tracking-wider font-mono">
+              Saved keys
+            </div>
+            {configuredProviders.length > 0 && (
+              <div className="text-[10px] text-secondary">
+                {configuredProviders.length} of {providerIds.length} providers configured
+              </div>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-6 text-secondary">
+              <Loader2 size={16} className="animate-spin" />
+            </div>
+          ) : credentials.length === 0 ? (
+            <p className="text-xs text-secondary py-2">
+              No keys saved for this workspace yet.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {credentials.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-center gap-3 border border-border rounded-input px-3 py-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-foreground capitalize">
+                        {PROVIDER_METADATA[c.provider as ProviderType]?.name || c.provider}
+                      </span>
+                      <Badge variant={isActive(c.status) ? 'success' : 'warning'}>
+                        {isActive(c.status) ? (
+                          <>
+                            <Check size={10} className="inline mr-1" />
+                            active
+                          </>
+                        ) : (
+                          c.status || 'invalid'
+                        )}
+                      </Badge>
+                    </div>
+                    <div className="text-[11px] text-secondary font-mono truncate">
+                      {c.key_mask}
+                    </div>
+                    <div className="text-[10px] text-secondary">
+                      Provider spend: ${Number(c.total_cost_usd || 0).toFixed(4)}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(c.id)}
+                    className="p-2 rounded-input text-secondary hover:text-error hover:bg-red-50"
+                    title="Delete key"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </Modal>
   );
