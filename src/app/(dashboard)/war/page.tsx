@@ -1,22 +1,19 @@
-import { Suspense } from 'react';
-import { WarWorkspace } from '@/components/war/WarWorkspace';
+'use client';
 
-function WarWorkspaceLoading() {
-  return (
-    <div className="flex h-screen w-full flex-col items-center justify-center bg-black text-neutral-400">
-      <div className="flex items-center gap-3">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-        <span className="font-mono text-xs uppercase tracking-widest text-neutral-300">
-          Loading War Arena...
-        </span>
-      </div>
-    </div>
-  );
-}
+import React, { Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
+import { WarWorkspace } from '@/components/war/WarWorkspace';
 
 export default function WarPage() {
   return (
-    <Suspense fallback={<WarWorkspaceLoading />}>
+    <Suspense
+      fallback={
+        <div className="flex h-full items-center justify-center text-sm text-text-muted gap-2">
+          <Loader2 className="animate-spin" size={16} />
+          Loading…
+        </div>
+      }
+    >
       <WarWorkspace />
     </Suspense>
   );

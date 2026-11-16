@@ -19,18 +19,18 @@ export function MetricsDrawer({ open, onClose, snapshot }: MetricsDrawerProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md border-l border-neutral-800 bg-neutral-950 shadow-2xl flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-900">
+    <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md border-l border-border bg-panel shadow-2xl flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div>
-          <h2 className="text-sm font-semibold text-neutral-100">Performance</h2>
-          <p className="text-[11px] text-neutral-500">
+          <h2 className="text-sm font-semibold text-text">Performance</h2>
+          <p className="text-[11px] text-text-muted">
             Real-time latency, cost, and engine traces
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+          className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-input transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

@@ -22,27 +22,27 @@ type Props = {
 function WinnerPill({ side }: { side: ComparisonMetricsResult['winningSide'] }) {
   if (side === 'amplified') {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-success border border-emerald-100">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-success/10 text-success border border-success/20">
         Amplified wins
       </span>
     );
   }
   if (side === 'direct') {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-workspace text-foreground border border-border">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-bg-elevated text-text border border-border">
         Direct wins
       </span>
     );
   }
   if (side === 'tie') {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-workspace text-secondary border border-border">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-bg-elevated text-text-muted border border-border">
         Tie
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-workspace text-secondary border border-border">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-bg-elevated text-text-muted border border-border">
       Unscored
     </span>
   );
@@ -59,9 +59,9 @@ function Stat({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-wide text-secondary font-medium">{label}</div>
-      <div className="text-sm font-semibold font-mono text-foreground mt-0.5 truncate">{value}</div>
-      {sub ? <div className="text-[10px] text-secondary mt-0.5 truncate">{sub}</div> : null}
+      <div className="text-[10px] uppercase tracking-wide text-text-muted font-medium">{label}</div>
+      <div className="text-sm font-semibold font-mono text-text mt-0.5 truncate">{value}</div>
+      {sub ? <div className="text-[10px] text-text-dim mt-0.5 truncate">{sub}</div> : null}
     </div>
   );
 }
@@ -88,11 +88,11 @@ export function ComparisonMetrics({
     metrics.qualityDeltaPct < 0;
 
   return (
-    <div className="border border-border rounded-card bg-white p-4 space-y-4">
+    <div className="border border-border rounded-lg bg-panel p-4 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-sm font-semibold text-foreground">Comparison metrics</div>
-          <p className="text-[11px] text-secondary mt-0.5">
+          <div className="text-sm font-semibold text-text">Comparison metrics</div>
+          <p className="text-[11px] text-text-muted mt-0.5">
             Quality formula: ((Amplified − Direct) / Direct) × 100 · costs separated
           </p>
         </div>
@@ -130,17 +130,17 @@ export function ComparisonMetrics({
         />
       </div>
 
-      {/* Quality bar — only when real scores exist */}
+      {/* Quality bar */}
       {metrics?.directScore !== null &&
       metrics?.directScore !== undefined &&
       metrics?.amplifiedScore !== null &&
       metrics?.amplifiedScore !== undefined ? (
         <div className="space-y-1.5">
-          <div className="flex justify-between text-[10px] text-secondary">
+          <div className="flex justify-between text-[10px] text-text-muted">
             <span>Direct {formatScore(metrics.directScore)} / 10</span>
             <span
               className={
-                qualityPositive ? 'text-success' : qualityNegative ? 'text-error' : 'text-secondary'
+                qualityPositive ? 'text-success' : qualityNegative ? 'text-error' : 'text-text-muted'
               }
             >
               {qualityText}
@@ -148,13 +148,13 @@ export function ComparisonMetrics({
             <span>Amplified {formatScore(metrics.amplifiedScore)} / 10</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="h-2 rounded-full bg-workspace overflow-hidden border border-border">
+            <div className="h-2 rounded-full bg-input overflow-hidden border border-border">
               <div
-                className="h-full bg-secondary/40 rounded-full transition-all duration-500"
+                className="h-full bg-text-muted/40 rounded-full transition-all duration-500"
                 style={{ width: `${Math.max(0, Math.min(100, (metrics.directScore / 10) * 100))}%` }}
               />
             </div>
-            <div className="h-2 rounded-full bg-workspace overflow-hidden border border-border">
+            <div className="h-2 rounded-full bg-input overflow-hidden border border-border">
               <div
                 className="h-full bg-accent rounded-full transition-all duration-500"
                 style={{
@@ -166,10 +166,10 @@ export function ComparisonMetrics({
         </div>
       ) : null}
 
-      {/* Cost separation — always show measured usage when present */}
+      {/* Cost separation */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-border">
-        <div className="rounded-input border border-border bg-workspace p-3 space-y-2">
-          <div className="text-[10px] uppercase tracking-wide text-secondary font-medium">
+        <div className="rounded-lg border border-border bg-bg-elevated p-3 space-y-2">
+          <div className="text-[10px] uppercase tracking-wide text-text-muted font-medium">
             Direct (raw) cost
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -194,8 +194,8 @@ export function ComparisonMetrics({
           </div>
         </div>
 
-        <div className="rounded-input border border-border bg-workspace p-3 space-y-2">
-          <div className="text-[10px] uppercase tracking-wide text-secondary font-medium">
+        <div className="rounded-lg border border-border bg-bg-elevated p-3 space-y-2">
+          <div className="text-[10px] uppercase tracking-wide text-text-muted font-medium">
             Amplified cost
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -229,7 +229,7 @@ export function ComparisonMetrics({
       </div>
 
       {metrics ? (
-        <div className="flex flex-wrap gap-4 text-[11px] text-secondary font-mono pt-1">
+        <div className="flex flex-wrap gap-4 text-[11px] text-text-muted font-mono pt-1">
           <span>Provider Δ {formatUsd(metrics.cost.providerCostDeltaUsd)}</span>
           <span>DSRT Δ {formatUsd(metrics.cost.dsrtCostDeltaUsd)}</span>
           <span>Total Δ {formatUsd(metrics.cost.totalCostDeltaUsd)}</span>
@@ -237,7 +237,7 @@ export function ComparisonMetrics({
       ) : null}
 
       {isRunning ? (
-        <p className="text-[11px] text-secondary">Live — metrics finalize when both sides and judge complete.</p>
+        <p className="text-[11px] text-text-muted">Live — metrics finalize when both sides and judge complete.</p>
       ) : null}
     </div>
   );

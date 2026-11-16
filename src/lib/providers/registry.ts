@@ -107,9 +107,7 @@ export const PROVIDER_METADATA: Record<ProviderType, ProviderMetadata> = {
 };
 
 export const MODEL_REGISTRY: Record<string, ModelSpec> = {
-  // ============================================================================
-  // GROQ (Production & Preview Models)
-  // ============================================================================
+  // GROQ
   'llama-3.3-70b-versatile': { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)', provider: 'groq', contextWindow: 131072, maxOutputTokens: 32768, pricing: { promptCostPerM: 0.59, completionCostPerM: 0.79 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
   'llama-3.1-8b-instant': { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant (Groq)', provider: 'groq', contextWindow: 131072, maxOutputTokens: 8192, pricing: { promptCostPerM: 0.05, completionCostPerM: 0.08 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
   'openai/gpt-oss-120b': { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B (Groq)', provider: 'groq', contextWindow: 131072, maxOutputTokens: 65536, pricing: { promptCostPerM: 0.15, completionCostPerM: 0.60 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
@@ -119,50 +117,35 @@ export const MODEL_REGISTRY: Record<string, ModelSpec> = {
   'deepseek-r1-distill-llama-70b': { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Llama 70B (Groq)', provider: 'groq', contextWindow: 131072, maxOutputTokens: 32768, pricing: { promptCostPerM: 0.59, completionCostPerM: 0.79 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
   'meta-llama/llama-prompt-guard-2-86m': { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Prompt Guard 2 86M (Groq)', provider: 'groq', contextWindow: 512, maxOutputTokens: 512, pricing: { promptCostPerM: 0.04, completionCostPerM: 0.04 }, supportsVision: false, supportsTools: false, supportsStreaming: true },
 
-  // ============================================================================
   // GOOGLE
-  // ============================================================================
   'gemini-2.5-flash': { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'google', contextWindow: 1048576, maxOutputTokens: 8192, pricing: { promptCostPerM: 0.075, completionCostPerM: 0.30 }, supportsVision: true, supportsTools: true, supportsStreaming: true },
   'gemini-2.0-flash': { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'google', contextWindow: 1048576, maxOutputTokens: 8192, pricing: { promptCostPerM: 0.10, completionCostPerM: 0.40 }, supportsVision: true, supportsTools: true, supportsStreaming: true },
   'gemini-1.5-pro': { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'google', contextWindow: 2000000, maxOutputTokens: 8192, pricing: { promptCostPerM: 1.25, completionCostPerM: 5.00 }, supportsVision: true, supportsTools: true, supportsStreaming: true },
   'gemini-1.5-flash': { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'google', contextWindow: 1000000, maxOutputTokens: 8192, pricing: { promptCostPerM: 0.075, completionCostPerM: 0.30 }, supportsVision: true, supportsTools: true, supportsStreaming: true },
 
-  // ============================================================================
   // OPENAI
-  // ============================================================================
   'gpt-4o': { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai', contextWindow: 128000, maxOutputTokens: 16384, pricing: { promptCostPerM: 2.50, completionCostPerM: 10.00, cachedPromptCostPerM: 1.25 }, supportsVision: true, supportsTools: true, supportsStreaming: true },
   'gpt-4o-mini': { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai', contextWindow: 128000, maxOutputTokens: 16384, pricing: { promptCostPerM: 0.15, completionCostPerM: 0.60, cachedPromptCostPerM: 0.075 }, supportsVision: true, supportsTools: true, supportsStreaming: true },
   'o1': { id: 'o1', name: 'OpenAI o1', provider: 'openai', contextWindow: 200000, maxOutputTokens: 100000, pricing: { promptCostPerM: 15.00, completionCostPerM: 60.00 }, supportsVision: true, supportsTools: true, supportsStreaming: false },
   'o1-mini': { id: 'o1-mini', name: 'OpenAI o1 Mini', provider: 'openai', contextWindow: 128000, maxOutputTokens: 65536, pricing: { promptCostPerM: 3.00, completionCostPerM: 12.00 }, supportsVision: false, supportsTools: true, supportsStreaming: false },
   'o3-mini': { id: 'o3-mini', name: 'OpenAI o3 Mini', provider: 'openai', contextWindow: 200000, maxOutputTokens: 100000, pricing: { promptCostPerM: 1.10, completionCostPerM: 4.40 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
 
-  // ============================================================================
   // ANTHROPIC
-  // ============================================================================
   'claude-3-5-sonnet-20241022': { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'anthropic', contextWindow: 200000, maxOutputTokens: 8192, pricing: { promptCostPerM: 3.00, completionCostPerM: 15.00 }, supportsVision: true, supportsTools: true, supportsStreaming: true },
   'claude-3-5-haiku-20241022': { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'anthropic', contextWindow: 200000, maxOutputTokens: 8192, pricing: { promptCostPerM: 0.80, completionCostPerM: 4.00 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
 
-  // ============================================================================
   // DEEPSEEK
-  // ============================================================================
   'deepseek-chat': { id: 'deepseek-chat', name: 'DeepSeek V3', provider: 'deepseek', contextWindow: 64000, maxOutputTokens: 8192, pricing: { promptCostPerM: 0.14, completionCostPerM: 0.28 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
   'deepseek-reasoner': { id: 'deepseek-reasoner', name: 'DeepSeek R1', provider: 'deepseek', contextWindow: 64000, maxOutputTokens: 8192, pricing: { promptCostPerM: 0.55, completionCostPerM: 2.19 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
 
-  // ============================================================================
   // MISTRAL
-  // ============================================================================
   'mistral-large-latest': { id: 'mistral-large-latest', name: 'Mistral Large', provider: 'mistral', contextWindow: 128000, maxOutputTokens: 8192, pricing: { promptCostPerM: 2.00, completionCostPerM: 6.00 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
   'mistral-small-latest': { id: 'mistral-small-latest', name: 'Mistral Small', provider: 'mistral', contextWindow: 32000, maxOutputTokens: 8192, pricing: { promptCostPerM: 0.20, completionCostPerM: 0.60 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
 
-  // ============================================================================
   // xAI
-  // ============================================================================
   'grok-2-latest': { id: 'grok-2-latest', name: 'Grok 2', provider: 'xai', contextWindow: 131072, maxOutputTokens: 8192, pricing: { promptCostPerM: 2.00, completionCostPerM: 10.00 }, supportsVision: false, supportsTools: true, supportsStreaming: true },
 };
 
-/**
- * Infer provider from model ID pattern
- */
 export function inferProviderFromModelId(modelId: string): ProviderType {
   const id = modelId.toLowerCase().trim();
   if (id.startsWith('openai/') || id.startsWith('gpt') || id.startsWith('o1') || id.startsWith('o3')) return 'openai';
@@ -174,13 +157,10 @@ export function inferProviderFromModelId(modelId: string): ProviderType {
   if (id.startsWith('xai/') || id.includes('grok')) return 'xai';
   if (id.startsWith('cohere/') || id.includes('command')) return 'cohere';
   if (id.startsWith('openrouter/')) return 'openrouter';
-  if (id.includes('llama') || id.includes('qwen')) return 'groq'; // Safely route generic open models
+  if (id.includes('llama') || id.includes('qwen')) return 'groq';
   return 'openai';
 }
 
-/**
- * Get model spec with safe fallback for unlisted models
- */
 export function getModelSpec(modelId: string): ModelSpec {
   if (MODEL_REGISTRY[modelId]) {
     return MODEL_REGISTRY[modelId];
@@ -202,9 +182,6 @@ export function getModelSpec(modelId: string): ModelSpec {
   };
 }
 
-/**
- * Calculate provider cost in USD
- */
 export function calculateProviderCost(
   modelId: string,
   promptTokens: number,
@@ -216,24 +193,14 @@ export function calculateProviderCost(
   return Number((promptCost + completionCost).toFixed(6));
 }
 
-/**
- * Get all models for a specific provider
- */
 export function getModelsForProvider(provider: ProviderType): ModelSpec[] {
   return Object.values(MODEL_REGISTRY).filter((m) => m.provider === provider);
 }
 
-/**
- * Get all providers list
- */
 export function getAllProviders(): ProviderMetadata[] {
   return Object.values(PROVIDER_METADATA);
 }
 
-/**
- * Prefer V3 pricing snapshots. Returns nulls (not zeros) when unknown.
- * Legacy getPricing() remains for backward compatibility.
- */
 export async function getPricingFromDB(
   supabase: SupabaseClient,
   provider: string,

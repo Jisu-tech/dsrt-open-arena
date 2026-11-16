@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { Loader2, Trash2, ExternalLink, KeyRound, Check } from 'lucide-react';
+import { Loader2, Trash2, Key, Check } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -159,7 +159,7 @@ export function ApiKeyManagerModal({
     <Modal isOpen={open} onClose={onClose} title="API Keys">
       <div className="space-y-6">
         {!workspaceId && (
-          <div className="text-xs text-warning bg-amber-50 border border-amber-200 rounded-input px-3 py-2">
+          <div className="text-xs text-warning bg-warning/10 border border-warning/20 rounded-lg px-3 py-2">
             No workspace selected. Complete sign-in and wait for your personal workspace
             to load.
           </div>
@@ -167,21 +167,21 @@ export function ApiKeyManagerModal({
 
         <form
           onSubmit={handleSave}
-          className="space-y-3 border border-border rounded-card p-4"
+          className="space-y-3 border border-border rounded-lg p-4 bg-panel"
         >
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <KeyRound size={16} className="text-accent" />
+          <div className="flex items-center gap-2 text-sm font-medium text-text">
+            <Key size={16} className="text-text" />
             Add provider key
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-secondary mb-1">
+            <label className="block text-xs font-medium text-text-muted mb-1">
               Provider
             </label>
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value as ProviderType)}
-              className="w-full px-3 py-2 rounded-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              className="w-full px-3 py-2 rounded-md border border-border bg-input text-text text-sm focus:outline-none focus:ring-1 focus:ring-accent"
               disabled={!workspaceId || saving}
             >
               {providerIds.map((p) => {
@@ -198,7 +198,7 @@ export function ApiKeyManagerModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-secondary mb-1">
+            <label className="block text-xs font-medium text-text-muted mb-1">
               API key
             </label>
             <input
@@ -207,7 +207,7 @@ export function ApiKeyManagerModal({
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-… (never stored in the browser after save)"
-              className="w-full px-3 py-2 rounded-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
+              className="w-full px-3 py-2 rounded-md border border-border bg-input text-text text-sm focus:outline-none focus:ring-1 focus:ring-accent font-mono"
               disabled={!workspaceId || saving}
               required
             />
@@ -218,19 +218,19 @@ export function ApiKeyManagerModal({
               href={meta.docsUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-accent hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text hover:underline"
             >
-              Provider docs <ExternalLink size={12} />
+              Provider docs →
             </a>
           )}
 
           {error && (
-            <div className="text-xs text-error bg-red-50 border border-red-200 rounded-input px-3 py-2">
+            <div className="text-xs text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
               {error}
             </div>
           )}
           {success && (
-            <div className="text-xs text-success bg-emerald-50 border border-emerald-200 rounded-input px-3 py-2">
+            <div className="text-xs text-success bg-success/10 border border-success/20 rounded-md px-3 py-2">
               {success}
             </div>
           )}
@@ -238,7 +238,7 @@ export function ApiKeyManagerModal({
           <Button type="submit" disabled={!workspaceId || saving || !apiKey.trim()}>
             {saving ? (
               <>
-                <Loader2 size={14} className="animate-spin" /> Validating…
+                <Loader2 size={14} className="animate-spin mr-2" /> Validating…
               </>
             ) : (
               'Validate & save'
@@ -248,22 +248,22 @@ export function ApiKeyManagerModal({
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-medium text-secondary uppercase tracking-wider font-mono">
+            <div className="text-xs font-medium text-text-muted uppercase tracking-wider font-mono">
               Saved keys
             </div>
             {configuredProviders.length > 0 && (
-              <div className="text-[10px] text-secondary">
+              <div className="text-[10px] text-text-dim">
                 {configuredProviders.length} of {providerIds.length} providers configured
               </div>
             )}
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-6 text-secondary">
+            <div className="flex justify-center py-6 text-text-muted">
               <Loader2 size={16} className="animate-spin" />
             </div>
           ) : credentials.length === 0 ? (
-            <p className="text-xs text-secondary py-2">
+            <p className="text-xs text-text-muted py-2">
               No keys saved for this workspace yet.
             </p>
           ) : (
@@ -271,11 +271,11 @@ export function ApiKeyManagerModal({
               {credentials.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-center gap-3 border border-border rounded-input px-3 py-2"
+                  className="flex items-center gap-3 border border-border rounded-md px-3 py-2 bg-panel"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground capitalize">
+                      <span className="text-sm font-medium text-text capitalize">
                         {PROVIDER_METADATA[c.provider as ProviderType]?.name || c.provider}
                       </span>
                       <Badge variant={isActive(c.status) ? 'success' : 'warning'}>
@@ -289,17 +289,17 @@ export function ApiKeyManagerModal({
                         )}
                       </Badge>
                     </div>
-                    <div className="text-[11px] text-secondary font-mono truncate">
+                    <div className="text-[11px] text-text-muted font-mono truncate">
                       {c.key_mask}
                     </div>
-                    <div className="text-[10px] text-secondary">
+                    <div className="text-[10px] text-text-dim">
                       Provider spend: ${Number(c.total_cost_usd || 0).toFixed(4)}
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => void handleDelete(c.id)}
-                    className="p-2 rounded-input text-secondary hover:text-error hover:bg-red-50"
+                    className="p-2 rounded-md text-text-muted hover:text-error hover:bg-error/10 transition-colors"
                     title="Delete key"
                   >
                     <Trash2 size={14} />

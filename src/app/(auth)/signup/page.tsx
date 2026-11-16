@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Zap, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Button } from '@/components/ui/Button';
+import { DsrtLogo } from '@/components/ui/DsrtMarks';
 
 export default function SignupPage() {
   const { signUp } = useAuth();
@@ -23,91 +24,105 @@ export default function SignupPage() {
     setError(null);
     setInfo(null);
     setIsSubmitting(true);
-    const { error: signUpError } = await signUp(email.trim(), password, displayName.trim());
+    const { error: signUpError } = await signUp(
+      email.trim(),
+      password,
+      displayName.trim()
+    );
     setIsSubmitting(false);
-    if (signUpError) {
-      setError(signUpError);
-      return;
-    }
-    // If email confirmation is disabled in Supabase, session exists → go home.
-    // If enabled, show message.
-    setInfo('Account created. Check your email to confirm, or sign in if confirmation is disabled.');
+    if (signUpError) return setError(signUpError);
+    setInfo('Account created. Check your email to confirm.');
     router.replace('/');
     router.refresh();
   };
 
+  const inputCls =
+    'w-full px-3 py-2.5 bg-input border border-border rounded-lg text-[13px] text-text placeholder:text-text-dim focus:outline-none focus:border-border-hover transition-colors';
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-workspace px-4">
-      <div className="w-full max-w-md border border-border rounded-card bg-white p-8 shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center">
-            <Zap size={16} className="text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-bg px-4 py-8">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex mb-4">
+            <DsrtLogo size={36} />
           </div>
-          <div>
-            <div className="text-sm font-bold tracking-tight text-foreground">DSRT ARENA</div>
-            <div className="text-[10px] text-secondary font-mono">Open Amplification</div>
-          </div>
+          <h1 className="text-[18px] font-semibold text-text tracking-tight">
+            Create your account
+          </h1>
+          <p className="text-[12px] text-text-faint mt-1">
+            Get started with Dsrt AI
+          </p>
         </div>
 
-        <h1 className="text-xl font-semibold text-foreground">Create account</h1>
-        <p className="text-xs text-secondary mt-1 mb-6">
-          A personal workspace is provisioned automatically on signup.
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-secondary mb-1">Display name</label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-3 py-2 rounded-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-              placeholder="Optional"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-secondary mb-1">Email</label>
-            <input
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 rounded-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-secondary mb-1">Password</label>
-            <input
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-
-          {error && (
-            <div className="text-xs text-error bg-red-50 border border-red-200 rounded-input px-3 py-2">
-              {error}
+        <div className="border border-border rounded-xl bg-bg-elevated p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-medium text-text-muted mb-1.5">
+                Display name
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className={inputCls}
+                placeholder="Optional"
+                autoComplete="name"
+              />
             </div>
-          )}
-          {info && (
-            <div className="text-xs text-success bg-emerald-50 border border-emerald-200 rounded-input px-3 py-2">
-              {info}
+            <div>
+              <label className="block text-[11px] font-medium text-text-muted mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputCls}
+                placeholder="you@example.com"
+              />
             </div>
-          )}
+            <div>
+              <label className="block text-[11px] font-medium text-text-muted mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={inputCls}
+                placeholder="At least 8 characters"
+              />
+            </div>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Create account'}
-          </Button>
-        </form>
+            {error && (
+              <div className="text-[11px] text-error bg-error-bg border border-error/30 rounded-lg px-3 py-2.5">
+                {error}
+              </div>
+            )}
+            {info && (
+              <div className="text-[11px] text-success bg-success-bg border border-success/30 rounded-lg px-3 py-2.5">
+                {info}
+              </div>
+            )}
 
-        <p className="text-xs text-secondary mt-6 text-center">
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                'Create account'
+              )}
+            </Button>
+          </form>
+        </div>
+
+        <p className="text-[11px] text-text-faint mt-6 text-center">
           Already have an account?{' '}
-          <Link href="/login" className="text-accent font-medium hover:underline">
+          <Link href="/login" className="text-text font-medium hover:underline">
             Sign in
           </Link>
         </p>

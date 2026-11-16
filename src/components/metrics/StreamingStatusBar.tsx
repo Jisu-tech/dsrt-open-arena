@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Loader2, Wrench, ShieldAlert, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Settings, Check, X } from 'lucide-react';
 
 interface StreamingStatusBarProps {
   state: string;
@@ -22,22 +22,22 @@ export function StreamingStatusBar({
 }: StreamingStatusBarProps) {
   if (error) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950 text-xs text-neutral-300">
-        <AlertCircle className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-        <span className="truncate">{error}</span>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-panel text-xs text-text-muted">
+        <X className="w-3.5 h-3.5 text-error shrink-0" />
+        <span className="truncate text-error">{error}</span>
       </div>
     );
   }
 
   if (!isStreaming && state === 'COMPLETED') {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950 text-xs text-neutral-400">
-        <CheckCircle2 className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-panel text-xs text-text-muted">
+        <Check className="w-3.5 h-3.5 text-text shrink-0" />
         <span>Completed</span>
-        {modelLabel && <span className="font-mono text-neutral-500">· {modelLabel}</span>}
+        {modelLabel && <span className="font-mono text-text-dim">· {modelLabel}</span>}
         {fallbackUsed && (
-          <span className="inline-flex items-center gap-1 text-neutral-300">
-            <ShieldAlert className="w-3 h-3" /> Failover used
+          <span className="inline-flex items-center gap-1 text-text">
+            Failover used
           </span>
         )}
       </div>
@@ -47,22 +47,21 @@ export function StreamingStatusBar({
   if (!isStreaming) return null;
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-950 text-xs text-neutral-300">
-      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-neutral-200" />
-      <span className="font-medium tracking-wide">{humanizeState(state)}</span>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-panel text-xs text-text-muted">
+      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-text" />
+      <span className="font-medium tracking-wide text-text">{humanizeState(state)}</span>
       {toolName && (
-        <span className="inline-flex items-center gap-1 text-neutral-400">
-          <Wrench className="w-3 h-3" />
+        <span className="inline-flex items-center gap-1 text-text-muted">
+          <Settings className="w-3 h-3" />
           {toolName}
         </span>
       )}
       {fallbackUsed && (
-        <span className="inline-flex items-center gap-1 text-neutral-400">
-          <ShieldAlert className="w-3 h-3" />
+        <span className="inline-flex items-center gap-1 text-text-muted">
           Failover
         </span>
       )}
-      {modelLabel && <span className="ml-auto font-mono text-neutral-500">{modelLabel}</span>}
+      {modelLabel && <span className="ml-auto font-mono text-text-dim">{modelLabel}</span>}
     </div>
   );
 }

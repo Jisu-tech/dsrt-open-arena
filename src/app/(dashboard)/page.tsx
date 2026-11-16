@@ -15,7 +15,7 @@ export default function HomePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-full items-center justify-center text-sm text-secondary gap-2">
+        <div className="flex h-full items-center justify-center text-sm text-text-muted gap-2">
           <Loader2 className="animate-spin" size={16} />
           Loading…
         </div>

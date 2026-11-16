@@ -2,36 +2,37 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Sparkles,
-  Swords,
   Plus,
-  MessageSquare,
+  Search,
+  Settings,
   LogOut,
   Loader2,
   PanelLeftClose,
   PanelLeftOpen,
-  BookOpen,
-  Hexagon,
+  MoreHorizontal,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useWorkspace } from '@/components/providers/WorkspaceProvider';
+import {
+  DsrtLogo,
+  WorkModeMark,
+  WarModeMark,
+  DocsMark,
+  ChatMark,
+  PinMark,
+} from '@/components/ui/DsrtMarks';
 import type { Conversation } from '@/types';
 
 const COLLAPSE_KEY = 'dsrt-sidebar-collapsed';
 
-function readCollapsedPreference(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return window.localStorage.getItem(COLLAPSE_KEY) === 'true';
-  } catch {
-    return false;
-  }
+interface SidebarProps {
+  onMobileClose?: () => void;
 }
 
-export function Sidebar() {
+export function Sidebar({ onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -42,25 +43,36 @@ export function Sidebar() {
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loadingConvos, setLoadingConvos] = useState(false);
-  // Lazy init from localStorage — no setState inside an effect
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(readCollapsedPreference);
-  const [logoFailed, setLogoFailed] = useState(false);
+  
+  // Hydration-safe initial collapse state
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Sync collapsed state after initial mount to prevent SSR mismatch
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(COLLAPSE_KEY);
+      if (stored === 'true') {
+        setIsCollapsed(true);
+      }
+    } catch {}
+  }, []);
+
+  const isMobile = !!onMobileClose;
+  const collapsed = isMobile ? false : isCollapsed;
 
   const toggleCollapse = () => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
+    setIsCollapsed((p) => {
+      const next = !p;
       try {
         window.localStorage.setItem(COLLAPSE_KEY, String(next));
-      } catch {
-        /* ignore quota / private mode */
-      }
+      } catch {}
       return next;
     });
   };
 
   useEffect(() => {
     if (!activeWorkspaceId) return;
-
     let cancelled = false;
 
     (async () => {
@@ -73,8 +85,8 @@ export function Sidebar() {
         const data = await res.json();
         if (cancelled) return;
         setConversations(data.conversations || []);
-      } catch (err) {
-        if (!cancelled) console.error('Failed to load conversations', err);
+      } catch {
+        /* ignore */
       } finally {
         if (!cancelled) setLoadingConvos(false);
       }
@@ -85,178 +97,305 @@ export function Sidebar() {
     };
   }, [activeWorkspaceId, pathname, activeConvId]);
 
-  const handleNewChat = () => {
-    router.push('/work');
-  };
-
   const handleSignOut = async () => {
     await signOut();
     router.replace('/login');
     router.refresh();
   };
 
-  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
-  const initial = displayName.charAt(0).toUpperCase();
-  const visibleConversations = activeWorkspaceId ? conversations : [];
+  const handleNav = (href: string) => {
+    router.push(href);
+    onMobileClose?.();
+  };
 
-  const navCls = (active: boolean) =>
-    `flex items-center gap-3 px-3 py-2 rounded-input text-sm transition-colors ${
+  const displayName =
+    profile?.full_name || user?.email?.split('@')[0] || 'User';
+  const initial = displayName.charAt(0).toUpperCase();
+  const emailPrefix = user?.email || '';
+
+  const pinned = conversations.slice(0, 0);
+  const recents = conversations;
+
+  const navItem = (active: boolean) =>
+    `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] transition-colors ${
       active
-        ? 'bg-blue-50 text-accent font-medium'
-        : 'text-secondary hover:bg-workspace hover:text-foreground'
-    }`;
+        ? 'bg-panel text-text'
+        : 'text-text-muted hover:bg-panel-hover hover:text-text'
+    } ${collapsed ? 'justify-center px-0' : ''}`;
 
   return (
     <aside
-      className={`shrink-0 border-r border-border bg-white flex flex-col h-full transition-[width] duration-200 ${
-        isCollapsed ? 'w-16' : 'w-64'
+      className={`shrink-0 h-full flex flex-col border-r border-border bg-sidebar transition-[width] duration-200 ease-out ${
+        collapsed ? 'w-[60px]' : 'w-[260px]'
       }`}
     >
-      <div className="h-16 px-3 flex items-center gap-2 border-b border-border overflow-hidden">
-        <Link href="/work" className="flex items-center gap-2.5 min-w-0">
-          <div className="relative h-8 w-8 shrink-0 flex items-center justify-center rounded-md bg-workspace border border-border overflow-hidden">
-            {!logoFailed ? (
-              <Image
-                src="/dsrt-logo.svg"
-                alt="DSRT AI"
-                width={32}
-                height={32}
-                className="object-contain p-0.5"
-                onError={() => setLogoFailed(true)}
-                priority
-              />
-            ) : (
-              <Hexagon size={18} className="text-accent" />
-            )}
-          </div>
-          {!isCollapsed && (
-            <div className="leading-tight min-w-0">
-              <div className="text-xs font-bold tracking-[0.14em] text-foreground uppercase">
-                DSRT AI
-              </div>
-              <div className="text-[9px] text-secondary font-mono truncate">
-                Open Arena
-              </div>
-            </div>
-          )}
-        </Link>
-      </div>
-
-      <nav className="p-2 space-y-1">
-        <Link
-          href="/work"
-          className={navCls(pathname.startsWith('/work') || pathname === '/')}
-          title="Work Mode"
-        >
-          <Sparkles size={18} className="shrink-0" />
-          {!isCollapsed && <span>Work Mode</span>}
-        </Link>
-        <Link
-          href="/war"
-          className={navCls(pathname.startsWith('/war'))}
-          title="War Mode"
-        >
-          <Swords size={18} className="shrink-0" />
-          {!isCollapsed && <span>War Mode</span>}
-        </Link>
-        <Link
-          href="/docs"
-          className={navCls(pathname.startsWith('/docs'))}
-          title="Documentation"
-        >
-          <BookOpen size={18} className="shrink-0" />
-          {!isCollapsed && <span>Docs</span>}
-        </Link>
-      </nav>
-
-      <div className="px-2 mb-2">
+      {/* Brand header */}
+      <div
+        className={`h-14 shrink-0 flex items-center border-b border-border ${
+          collapsed ? 'justify-center px-2' : 'px-3 justify-between'
+        }`}
+      >
         <button
           type="button"
-          onClick={handleNewChat}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-input border border-border text-xs font-medium text-foreground hover:border-accent hover:text-accent transition-colors"
-          title="New Chat"
+          onClick={() => handleNav('/work')}
+          className="flex items-center gap-2.5 min-w-0"
+          title="DSRT AI"
         >
-          <Plus size={14} />
-          {!isCollapsed && <span>New Chat</span>}
+          <DsrtLogo size={22} />
+          {!collapsed && (
+            <span className="text-[13px] font-semibold text-text tracking-tight dsrt-fade">
+              Dsrt AI
+            </span>
+          )}
+        </button>
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="p-1.5 rounded-md text-text-faint hover:text-text hover:bg-panel-hover transition-colors"
+          >
+            <X size={16} strokeWidth={1.8} />
+          </button>
+        )}
+      </div>
+
+      {/* Actions: New chat + Search */}
+      <div className="shrink-0 p-2 space-y-1">
+        <button
+          type="button"
+          onClick={() => handleNav('/work')}
+          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-text-muted hover:bg-panel-hover hover:text-text transition-colors ${
+            collapsed ? 'justify-center px-0' : ''
+          }`}
+          title="New chat"
+        >
+          <Plus size={15} strokeWidth={1.8} className="shrink-0" />
+          {!collapsed && <span className="dsrt-fade">New chat</span>}
+        </button>
+        <button
+          type="button"
+          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-text-muted hover:bg-panel-hover hover:text-text transition-colors ${
+            collapsed ? 'justify-center px-0' : ''
+          }`}
+          title="Search chats"
+        >
+          <Search size={14} strokeWidth={1.8} className="shrink-0" />
+          {!collapsed && (
+            <span className="dsrt-fade flex items-center justify-between flex-1">
+              <span>Search</span>
+              <kbd className="text-[9px] text-text-faint font-mono bg-panel border border-border rounded px-1 py-[1px]">
+                ⌘K
+              </kbd>
+            </span>
+          )}
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
-        {!isCollapsed && (
-          <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-secondary">
-            Recent
+      {/* Modes */}
+      <div className="shrink-0 px-2 pt-1 pb-2">
+        {!collapsed && (
+          <div className="px-2.5 pb-1 text-[10px] font-medium uppercase tracking-wider text-text-faint dsrt-fade">
+            Modes
           </div>
         )}
-        {wsLoading || loadingConvos ? (
-          <div className="flex items-center justify-center py-6 text-secondary">
-            <Loader2 size={14} className="animate-spin" />
+        <div className="space-y-0.5">
+          <button
+            type="button"
+            onClick={() => handleNav('/work')}
+            className={navItem(pathname.startsWith('/work') || pathname === '/')}
+            title="Work Mode"
+          >
+            <WorkModeMark size={15} className="shrink-0" />
+            {!collapsed && <span className="dsrt-fade">Work Mode</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNav('/war')}
+            className={navItem(pathname.startsWith('/war'))}
+            title="War Mode"
+          >
+            <WarModeMark size={15} className="shrink-0" />
+            {!collapsed && <span className="dsrt-fade">War Mode</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNav('/docs')}
+            className={navItem(pathname.startsWith('/docs'))}
+            title="Documentation"
+          >
+            <DocsMark size={15} className="shrink-0" />
+            {!collapsed && <span className="dsrt-fade">Docs</span>}
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable: Pinned + Recents */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
+        {!collapsed && pinned.length > 0 && (
+          <>
+            <div className="px-2.5 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-text-faint dsrt-fade">
+              Pinned
+            </div>
+            <ul className="space-y-0.5 mb-3">
+              {pinned.map((c) => (
+                <ConvItem
+                  key={c.id}
+                  c={c}
+                  active={activeConvId === c.id}
+                  pinned
+                  onNav={onMobileClose}
+                />
+              ))}
+            </ul>
+          </>
+        )}
+
+        {!collapsed && (
+          <div className="px-2.5 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-text-faint dsrt-fade">
+            Recents
           </div>
-        ) : visibleConversations.length === 0 ? (
-          !isCollapsed ? (
-            <p className="px-2 py-3 text-[11px] text-secondary">No conversations yet</p>
-          ) : null
+        )}
+
+        {wsLoading || loadingConvos ? (
+          <div className="flex items-center justify-center py-6 text-text-faint">
+            <Loader2 size={13} className="animate-spin" />
+          </div>
+        ) : recents.length === 0 ? (
+          !collapsed && (
+            <p className="px-2.5 py-2 text-[11px] text-text-faint dsrt-fade">
+              No conversations yet
+            </p>
+          )
         ) : (
           <ul className="space-y-0.5">
-            {visibleConversations.map((c) => {
-              const active = activeConvId === c.id;
-              return (
-                <li key={c.id}>
-                  <Link
-                    href={`/work?c=${c.id}`}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-input text-xs truncate transition-colors ${
-                      active
-                        ? 'bg-blue-50 text-accent'
-                        : 'text-secondary hover:bg-workspace hover:text-foreground'
-                    }`}
-                    title={c.title}
-                  >
-                    <MessageSquare size={12} className="shrink-0" />
-                    {!isCollapsed && (
-                      <span className="truncate">{c.title || 'Untitled'}</span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
+            {recents.map((c) => (
+              <ConvItem
+                key={c.id}
+                c={c}
+                active={activeConvId === c.id}
+                collapsed={collapsed}
+                onNav={onMobileClose}
+              />
+            ))}
           </ul>
         )}
       </div>
 
-      <div className="border-t border-border p-2 space-y-1">
-        <div className="flex items-center gap-2 px-1">
-          <div className="h-8 w-8 shrink-0 rounded-full bg-workspace border border-border flex items-center justify-center text-xs font-semibold text-foreground">
-            {authLoading ? '…' : initial}
-          </div>
-          {!isCollapsed && (
-            <>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-foreground truncate">
-                  {displayName}
+      {/* Footer */}
+      <div className="shrink-0 border-t border-border p-2 space-y-1">
+        <button
+          type="button"
+          onClick={() => handleNav('/settings')}
+          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-text-muted hover:bg-panel-hover hover:text-text transition-colors ${
+            collapsed ? 'justify-center px-0' : ''
+          }`}
+          title="Settings"
+        >
+          <Settings size={14} strokeWidth={1.7} className="shrink-0" />
+          {!collapsed && <span className="dsrt-fade">Settings</span>}
+        </button>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => !collapsed && setUserMenuOpen((v) => !v)}
+            className={`w-full flex items-center gap-2 p-1.5 rounded-md hover:bg-panel-hover transition-colors ${
+              collapsed ? 'justify-center' : ''
+            }`}
+          >
+            <div className="h-7 w-7 shrink-0 rounded-full bg-panel border border-border-strong flex items-center justify-center text-[11px] font-semibold text-text">
+              {authLoading ? '…' : initial}
+            </div>
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0 text-left dsrt-fade">
+                  <div className="text-[12px] font-medium text-text truncate leading-tight">
+                    {displayName}
+                  </div>
+                  <div className="text-[10px] text-text-faint truncate leading-tight mt-0.5">
+                    {emailPrefix}
+                  </div>
                 </div>
-                <div className="text-[10px] text-secondary truncate">{user?.email}</div>
-              </div>
+                <MoreHorizontal size={13} className="text-text-faint shrink-0" />
+              </>
+            )}
+          </button>
+
+          {userMenuOpen && !collapsed && (
+            <div className="absolute bottom-full left-0 right-0 mb-1 bg-panel border border-border-strong rounded-md shadow-xl overflow-hidden dsrt-fade z-50">
               <button
                 type="button"
                 onClick={() => void handleSignOut()}
-                className="p-1.5 rounded-input text-secondary hover:text-error hover:bg-red-50 transition-colors"
-                title="Sign out"
+                className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-text-muted hover:text-error hover:bg-error-bg transition-colors"
               >
-                <LogOut size={14} />
+                <LogOut size={12} />
+                Sign out
               </button>
-            </>
+            </div>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={toggleCollapse}
-          className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-input text-secondary hover:bg-workspace hover:text-foreground transition-colors"
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-          {!isCollapsed && <span className="text-[11px]">Collapse</span>}
-        </button>
+        {!isMobile && (
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-text-faint hover:bg-panel-hover hover:text-text transition-colors ${
+              collapsed ? 'justify-center px-0' : ''
+            }`}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={14} strokeWidth={1.7} />
+            ) : (
+              <PanelLeftClose size={14} strokeWidth={1.7} />
+            )}
+            {!collapsed && (
+              <span className="text-[11px] dsrt-fade">Collapse</span>
+            )}
+          </button>
+        )}
       </div>
     </aside>
+  );
+}
+
+function ConvItem({
+  c,
+  active,
+  pinned = false,
+  collapsed = false,
+  onNav,
+}: {
+  c: Conversation;
+  active: boolean;
+  pinned?: boolean;
+  collapsed?: boolean;
+  onNav?: () => void;
+}) {
+  return (
+    <li>
+      <Link
+        href={`/work?c=${c.id}`}
+        onClick={() => onNav?.()}
+        className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] truncate transition-colors ${
+          active
+            ? 'bg-panel text-text'
+            : 'text-text-muted hover:bg-panel-hover hover:text-text'
+        } ${collapsed ? 'justify-center px-0' : ''}`}
+        title={c.title || 'Untitled'}
+      >
+        {pinned ? (
+          <PinMark size={10} className="shrink-0 text-text-faint" />
+        ) : (
+          <ChatMark
+            size={12}
+            className="shrink-0 text-text-faint opacity-70"
+          />
+        )}
+        {!collapsed && (
+          <span className="truncate flex-1">{c.title || 'Untitled'}</span>
+        )}
+      </Link>
+    </li>
   );
 }

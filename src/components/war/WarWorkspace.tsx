@@ -2,13 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import {
-  Loader2,
-  Swords,
-  Shield,
-  Sparkles,
-  Lock,
-} from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ModelSelector } from '@/components/work/ModelSelector';
 import { useWorkspace } from '@/components/providers/WorkspaceProvider';
@@ -18,7 +12,7 @@ import { ComparisonMetrics } from '@/components/war/ComparisonMetrics';
 import { RubricDisplay } from '@/components/war/RubricDisplay';
 import type { ComparisonMetricsResult, SideUsage } from '@/lib/warmode/metrics';
 import type { RubricEvaluation } from '@/lib/warmode/evaluator';
-import { WarMark } from '@/components/ui/Marks';
+import { WarModeMark, DsrtBrand } from '@/components/ui/DsrtMarks';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 type EngineTone = { engineId: string; name: string; status: 'running' | 'done' | 'failed' };
@@ -49,16 +43,16 @@ function SidePanel({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col min-h-0 min-w-0 border border-border rounded-card bg-white overflow-hidden">
-      <div className="shrink-0 px-4 py-2.5 border-b border-border flex items-center justify-between gap-2 bg-workspace">
+    <div className="flex flex-col min-h-0 min-w-0 border border-border rounded-lg bg-panel overflow-hidden">
+      <div className="shrink-0 px-4 py-2.5 border-b border-border flex items-center justify-between gap-2 bg-bg-elevated">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-semibold text-foreground truncate">{title}</span>
+          <span className="text-sm font-semibold text-text truncate">{title}</span>
           <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${badgeClass}`}>
             {badge}
           </span>
         </div>
         {isStreaming ? (
-          <Loader2 className="animate-spin text-secondary shrink-0" size={14} />
+          <Loader2 className="animate-spin text-text-muted shrink-0" size={14} />
         ) : failed ? (
           <span className="text-[10px] text-error font-medium">Failed</span>
         ) : null}
@@ -67,20 +61,20 @@ function SidePanel({
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="flex-1 overflow-y-auto px-4 py-4 min-h-70"
+        className="flex-1 overflow-y-auto px-4 py-4 min-h-[300px]"
       >
         {!content && !isStreaming ? (
-          <p className="text-xs text-secondary leading-relaxed">{emptyHint}</p>
+          <p className="text-xs text-text-dim leading-relaxed">{emptyHint}</p>
         ) : (
           <MarkdownRenderer content={content} isStreaming={isStreaming} />
         )}
       </div>
 
-      <div className="shrink-0 border-t border-border px-4 py-2 bg-workspace">
+      <div className="shrink-0 border-t border-border px-4 py-2 bg-bg-elevated">
         {footer ? (
           footer
         ) : (
-          <div className="flex flex-wrap gap-3 text-[10px] font-mono text-secondary">
+          <div className="flex flex-wrap gap-3 text-[10px] font-mono text-text-muted">
             <span>
               Provider{' '}
               {usage ? `$${usage.providerCostUsd.toFixed(4)}` : '—'}
@@ -395,7 +389,7 @@ export function WarWorkspace() {
 
   if (wsLoading) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-secondary">
+      <div className="flex h-full items-center justify-center text-sm text-text-muted">
         <Loader2 className="animate-spin mr-2" size={16} />
         Loading workspace…
       </div>
@@ -404,18 +398,18 @@ export function WarWorkspace() {
 
   if (!activeWorkspaceId) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-secondary p-8 text-center">
+      <div className="flex h-full items-center justify-center text-sm text-text-muted p-8 text-center">
         No workspace found for your account.
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col h-full min-h-0 bg-bg text-text">
       {/* Top bar */}
-      <div className="border-b border-border bg-white px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="border-b border-border bg-panel px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-4 min-w-0">
-          <WarMark className="h-6 text-foreground w-auto shrink-0" />
+          <WarModeMark className="h-6 text-text w-auto shrink-0" />
           <ModelSelector
             provider={provider}
             model={model}
@@ -427,18 +421,16 @@ export function WarWorkspace() {
 
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {fairPlayMsg ? (
-            <div className="flex items-center gap-1.5 text-[11px] text-secondary max-w-md">
-              <Lock size={12} className="shrink-0" />
+            <div className="flex items-center gap-1.5 text-[11px] text-text-muted max-w-md">
               <span className="truncate">{fairPlayMsg}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-[11px] text-secondary">
-              <Lock size={12} />
+            <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
               <span>Same model both sides · raw path = zero amplification</span>
             </div>
           )}
           {stateLabel ? (
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-workspace border border-border text-secondary">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-bg-elevated border border-border text-text-muted">
               {stateLabel}
             </span>
           ) : null}
@@ -449,23 +441,23 @@ export function WarWorkspace() {
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="p-4 md:p-6 space-y-4 max-w-[1600px] mx-auto">
           {lastPrompt ? (
-            <div className="border border-border rounded-card bg-workspace px-4 py-3">
-              <div className="text-[10px] uppercase tracking-wide text-secondary font-medium mb-1">
+            <div className="border border-border rounded-lg bg-bg-elevated px-4 py-3">
+              <div className="text-[10px] uppercase tracking-wide text-text-muted font-medium mb-1">
                 Prompt under test
               </div>
-              <p className="text-sm text-foreground whitespace-pre-wrap">{lastPrompt}</p>
+              <p className="text-sm text-text whitespace-pre-wrap">{lastPrompt}</p>
               {(executionId || comparisonId) && (
-                <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-mono text-secondary">
+                <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-mono text-text-dim">
                   {executionId ? <span>execution {executionId}</span> : null}
                   {comparisonId ? <span>comparison {comparisonId}</span> : null}
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-center py-10 border border-dashed border-border rounded-card bg-white">
-              <Swords className="mx-auto text-secondary mb-3" size={28} />
-              <h3 className="text-base font-semibold text-foreground">Raw vs Amplified</h3>
-              <p className="text-xs text-secondary mt-1 max-w-md mx-auto leading-relaxed">
+            <div className="text-center py-10 border border-dashed border-border rounded-lg bg-panel">
+              <WarModeMark className="h-10 mx-auto text-text-muted mb-4 opacity-50" />
+              <h3 className="text-base font-semibold text-text">Raw vs Amplified</h3>
+              <p className="text-xs text-text-muted mt-1 max-w-md mx-auto leading-relaxed">
                 Both sides run the same provider and model in parallel. Left is direct gateway
                 output. Right is the full DSRT 12-engine amplification path.
               </p>
@@ -473,11 +465,11 @@ export function WarWorkspace() {
           )}
 
           {/* Side by side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-90">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[500px]">
             <SidePanel
               title="Direct"
               badge="RAW"
-              badgeClass="bg-white text-secondary border border-border"
+              badgeClass="bg-panel text-text-muted border border-border"
               content={rawContent}
               isStreaming={rawStreaming}
               failed={rawFailed}
@@ -486,8 +478,7 @@ export function WarWorkspace() {
               onScroll={() => syncScroll('raw')}
               emptyHint="Raw model output streams here. Zero DSRT engines touch this path."
               footer={
-                <div className="flex items-center gap-2 text-[10px] text-secondary">
-                  <Shield size={12} />
+                <div className="flex items-center gap-2 text-[10px] text-text-muted">
                   <span>Isolated gateway path · dsrt_cost always $0.00</span>
                 </div>
               }
@@ -504,8 +495,7 @@ export function WarWorkspace() {
               onScroll={() => syncScroll('amp')}
               emptyHint="Full amplification pipeline output streams here."
               footer={
-                <div className="flex items-center gap-2 text-[10px] text-secondary min-w-0">
-                  <Sparkles size={12} className="shrink-0 text-accent" />
+                <div className="flex items-center gap-2 text-[10px] text-text-muted min-w-0">
                   <span className="truncate">
                     {engines.length > 0
                       ? engines
@@ -538,7 +528,7 @@ export function WarWorkspace() {
           />
 
           {error ? (
-            <div className="p-3 bg-red-50 border border-red-200 text-error rounded-input text-xs">
+            <div className="p-3 bg-error/10 border border-error/20 text-error rounded-lg text-xs">
               {error}
             </div>
           ) : null}
@@ -546,7 +536,7 @@ export function WarWorkspace() {
       </div>
 
       {/* Composer */}
-      <div className="border-t border-border bg-white p-4 shrink-0">
+      <div className="border-t border-border bg-panel p-4 shrink-0">
         <form onSubmit={handleRun} className="max-w-[1600px] mx-auto flex gap-2">
           <textarea
             value={input}
@@ -559,7 +549,7 @@ export function WarWorkspace() {
             }}
             placeholder="Enter a prompt to compare raw vs amplified…"
             rows={2}
-            className="flex-1 px-4 py-2 rounded-input border border-border text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent"
+            className="flex-1 px-4 py-2 rounded-lg border border-border bg-input text-text text-sm resize-none focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-colors"
             disabled={isRunning}
           />
           <Button
@@ -570,10 +560,7 @@ export function WarWorkspace() {
             {isRunning ? (
               <Loader2 className="animate-spin" size={16} />
             ) : (
-              <>
-                <Swords size={16} className="mr-1.5" />
-                Run comparison
-              </>
+              'Run comparison'
             )}
           </Button>
         </form>

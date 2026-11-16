@@ -1,15 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Key, ChevronDown } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Key, ChevronDown, PanelLeftOpen } from 'lucide-react';
 import { useWorkspace } from '@/components/providers/WorkspaceProvider';
 import { ApiKeyManagerModal } from '@/components/credentials/ApiKeyManagerModal';
-import { Badge } from '@/components/ui/Badge';
 
-export function TopBar() {
+interface TopBarProps {
+  onMobileMenuToggle?: () => void;
+  onCommandPalette?: () => void;
+}
+
+export function TopBar({ onMobileMenuToggle, onCommandPalette }: TopBarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const {
     workspaces,
-    activeWorkspace,
     activeWorkspaceId,
     setActiveWorkspaceId,
     isLoading,
@@ -17,11 +23,9 @@ export function TopBar() {
 
   const [keysOpen, setKeysOpen] = useState(false);
   const [keyCount, setKeyCount] = useState(0);
-  const [usageLabel, setUsageLabel] = useState<string>('—');
 
   useEffect(() => {
     if (!activeWorkspaceId) return;
-
     let cancelled = false;
 
     (async () => {
@@ -32,19 +36,9 @@ export function TopBar() {
         if (!res.ok || cancelled) return;
         const data = await res.json();
         const items = data.credentials || data.items || [];
-        if (cancelled) return;
-        setKeyCount(items.length);
-        const total = items.reduce(
-          (sum: number, c: { total_cost_usd?: number }) =>
-            sum + (Number(c.total_cost_usd) || 0),
-          0
-        );
-        setUsageLabel(total > 0 ? `$${total.toFixed(4)} provider` : '$0.00 provider');
+        if (!cancelled) setKeyCount(items.length);
       } catch {
-        if (!cancelled) {
-          setKeyCount(0);
-          setUsageLabel('Unavailable');
-        }
+        if (!cancelled) setKeyCount(0);
       }
     })();
 
@@ -53,60 +47,99 @@ export function TopBar() {
     };
   }, [activeWorkspaceId, keysOpen]);
 
-  // Derive display values — no sync setState when workspace is null
-  const displayKeyCount = activeWorkspaceId ? keyCount : 0;
-  const displayUsage = activeWorkspaceId ? usageLabel : '—';
+  const isWork = pathname.startsWith('/work') || pathname === '/';
+  const isWar = pathname.startsWith('/war');
 
   return (
     <>
-      <header className="h-16 shrink-0 border-b border-border bg-white px-6 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
+      <header className="h-14 shrink-0 border-b border-border bg-bg flex items-center justify-between px-4 md:px-6">
+        {/* Left: mobile menu + workspace */}
+        <div className="flex items-center gap-2 min-w-0">
+          {onMobileMenuToggle && (
+            <button
+              type="button"
+              onClick={onMobileMenuToggle}
+              className="md:hidden p-1.5 rounded-md text-text-muted hover:text-text hover:bg-panel-hover transition-colors"
+              title="Menu"
+            >
+              <PanelLeftOpen size={16} strokeWidth={1.7} />
+            </button>
+          )}
+
           <div className="relative">
-            <label className="sr-only">Workspace</label>
             <select
               disabled={isLoading || workspaces.length === 0}
               value={activeWorkspaceId ?? ''}
               onChange={(e) => setActiveWorkspaceId(e.target.value)}
-              className="appearance-none bg-workspace border border-border rounded-input pl-3 pr-8 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent max-w-55"
+              className="appearance-none bg-panel border border-border rounded-md pl-3 pr-8 py-1.5 text-[12px] text-text font-medium hover:border-border-hover focus:outline-none focus:border-border-hover transition-colors max-w-[200px] cursor-pointer"
             >
               {workspaces.length === 0 ? (
                 <option value="">No workspace</option>
               ) : (
                 workspaces.map((w) => (
-                  <option key={w.id} value={w.id}>
+                  <option key={w.id} value={w.id} className="bg-panel">
                     {w.name}
                   </option>
                 ))
               )}
             </select>
             <ChevronDown
-              size={14}
-              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-secondary"
+              size={12}
+              strokeWidth={1.8}
+              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-faint"
             />
           </div>
-          {activeWorkspace && (
-            <Badge variant="outline">Personal</Badge>
-          )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:block text-xs text-secondary font-mono">
-            DSRT Usage:&nbsp;
-            <span className="text-foreground">$0.00 (Free tier)</span>
-            <span className="mx-2 text-border">|</span>
-            <span className="text-foreground">{displayUsage}</span>
-          </div>
+        {/* Center: mode tabs */}
+        <div className="flex items-center p-0.5 bg-panel border border-border rounded-full">
+          <button
+            type="button"
+            onClick={() => router.push('/work')}
+            className={`px-4 py-1 rounded-full text-[12px] font-medium transition-colors ${
+              isWork
+                ? 'bg-bg-elevated text-text shadow-sm'
+                : 'text-text-muted hover:text-text'
+            }`}
+          >
+            Work
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/war')}
+            className={`px-4 py-1 rounded-full text-[12px] font-medium transition-colors ${
+              isWar
+                ? 'bg-bg-elevated text-text shadow-sm'
+                : 'text-text-muted hover:text-text'
+            }`}
+          >
+            War
+          </button>
+        </div>
+
+        {/* Right: ⌘K + API keys */}
+        <div className="flex items-center gap-2">
+          {onCommandPalette && (
+            <button
+              type="button"
+              onClick={onCommandPalette}
+              className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-panel hover:bg-panel-hover border border-border hover:border-border-hover text-[11px] font-mono text-text-faint transition-colors"
+              title="Command palette"
+            >
+              ⌘K
+            </button>
+          )}
 
           <button
             type="button"
             onClick={() => setKeysOpen(true)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-input border border-border text-xs font-medium text-foreground hover:border-accent hover:text-accent transition-colors"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-panel hover:bg-panel-hover border border-border hover:border-border-hover text-[12px] font-medium text-text transition-colors"
           >
-            <Key size={14} />
-            API Keys
-            {displayKeyCount > 0 && (
-              <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent text-[10px] text-white px-1">
-                {displayKeyCount}
+            <Key size={12} strokeWidth={1.8} />
+            <span className="hidden sm:inline">API Keys</span>
+            {keyCount > 0 && (
+              <span className="inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-text text-bg text-[9px] px-1 font-semibold leading-none">
+                {keyCount}
               </span>
             )}
           </button>

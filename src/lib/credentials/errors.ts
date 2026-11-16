@@ -1,18 +1,12 @@
-export type CredentialErrorCode =
-  | 'CREDENTIAL_NOT_FOUND'
-  | 'CREDENTIAL_DISABLED'
-  | 'CREDENTIAL_DECRYPTION_FAILED'
-  | 'INVALID_API_KEY'
-  | 'WORKSPACE_ACCESS_DENIED'
-  | 'UNSUPPORTED_PROVIDER';
-
 export class CredentialError extends Error {
-  constructor(
-    public code: CredentialErrorCode,
-    message: string,
-    public provider?: string
-  ) {
+  public readonly code: string;
+  public readonly provider: string;
+
+  constructor(code: string, message: string, provider: string) {
     super(message);
     this.name = 'CredentialError';
+    this.code = code;
+    this.provider = provider;
+    Object.setPrototypeOf(this, CredentialError.prototype);
   }
 }

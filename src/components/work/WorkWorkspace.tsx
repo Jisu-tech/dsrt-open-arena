@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { Plus, ArrowUp, Square, Mic } from 'lucide-react';
 import { EmptyState } from '@/components/work/EmptyState';
 import { MessageActions } from '@/components/work/MessageActions';
 import { ModelSelector } from '@/components/work/ModelSelector';
@@ -9,20 +10,23 @@ import { StreamingStatusBar, MetricsDrawer } from '@/components/metrics';
 import { usePerformanceTracker } from '@/hooks/usePerformanceTracker';
 import { useWorkspace } from '@/components/providers/WorkspaceProvider';
 import { useConfiguredProviders } from '@/hooks/useConfiguredProviders';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
+import { DsrtLogo } from '@/components/ui/DsrtMarks';
 import type { Message } from '@/types';
 import type { ProviderType } from '@/lib/providers/registry';
-import { Send, Swords, Archive, Trash2, Sparkles } from 'lucide-react';
-import { WorkMark } from '@/components/ui/Marks';
-import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 export function WorkWorkspace() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const queryConversationId = searchParams.get('c');
   const { activeWorkspaceId } = useWorkspace();
-  const { configuredProviders } = useConfiguredProviders(activeWorkspaceId || undefined);
+  const { configuredProviders } = useConfiguredProviders(
+    activeWorkspaceId || undefined
+  );
 
-  const [conversationId, setConversationId] = useState<string | null>(queryConversationId);
+  const [conversationId, setConversationId] = useState<string | null>(
+    queryConversationId
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -30,38 +34,44 @@ export function WorkWorkspace() {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
 
-  // Safe defaults matching registry
   const [provider, setProvider] = useState<ProviderType>('groq');
   const [model, setModel] = useState('llama-3.3-70b-versatile');
 
   const { snapshot, start: startMetrics, getTracker } = usePerformanceTracker();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, currentState]);
 
-  // URL is source of truth. Parent remounts on c change (key=), so no reset setState here.
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
+  }, [inputMessage]);
+
   useEffect(() => {
     if (!queryConversationId) return;
-
     let cancelled = false;
 
     (async () => {
       try {
-        const res = await fetch(`/api/v1/conversations/${queryConversationId}`);
+        const res = await fetch(
+          `/api/v1/conversations/${queryConversationId}`
+        );
         if (!res.ok || cancelled) return;
         const data = await res.json();
         if (cancelled) return;
         setMessages(data.messages || []);
         if (data.conversation) {
           setConversationId(data.conversation.id);
-          if (data.conversation.default_provider) {
+          if (data.conversation.default_provider)
             setProvider(data.conversation.default_provider);
-          }
-          if (data.conversation.default_model) {
+          if (data.conversation.default_model)
             setModel(data.conversation.default_model);
-          }
         }
       } catch (err) {
         if (!cancelled) console.error('Failed to load conversation', err);
@@ -72,6 +82,12 @@ export function WorkWorkspace() {
       cancelled = true;
     };
   }, [queryConversationId]);
+
+  const stopStreaming = () => {
+    abortRef.current?.abort();
+    setIsStreaming(false);
+    setCurrentState('CANCELLED');
+  };
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -103,6 +119,9 @@ export function WorkWorkspace() {
     const execId = `exec_${Date.now()}`;
     startMetrics(execId, true);
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       const response = await fetch('/api/v1/work/stream', {
         method: 'POST',
@@ -116,6 +135,7 @@ export function WorkWorkspace() {
           provider,
           model,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok || !response.body) {
@@ -161,9 +181,8 @@ export function WorkWorkspace() {
 
             if (eventType === 'meta' && data.conversationId) {
               setConversationId(data.conversationId);
-              if (!queryConversationId) {
+              if (!queryConversationId)
                 router.replace(`/work?c=${data.conversationId}`);
-              }
             } else if (eventType === 'state') {
               setCurrentState(data.state);
               getTracker()?.setState(data.state);
@@ -171,15 +190,26 @@ export function WorkWorkspace() {
               setActiveTool(data.name);
             } else if (eventType === 'content') {
               assistantMsg.content += data.content;
-              setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...assistantMsg } : m)));
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id ? { ...assistantMsg } : m
+                )
+              );
               getTracker()?.recordContent();
             } else if (eventType === 'content_replace') {
               assistantMsg.content = data.content;
-              setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...assistantMsg } : m)));
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id ? { ...assistantMsg } : m
+                )
+              );
             } else if (eventType === 'done') {
-              assistantMsg.token_count_prompt = data.usage?.promptTokens || 0;
-              assistantMsg.token_count_completion = data.usage?.completionTokens || 0;
-              assistantMsg.provider_cost_usd = data.usage?.providerCostUsd || 0;
+              assistantMsg.token_count_prompt =
+                data.usage?.promptTokens || 0;
+              assistantMsg.token_count_completion =
+                data.usage?.completionTokens || 0;
+              assistantMsg.provider_cost_usd =
+                data.usage?.providerCostUsd || 0;
               assistantMsg.dsrt_cost_usd = data.dsrtCostUsd || 0;
               assistantMsg.latency_ms = data.latencyMs || 0;
 
@@ -187,7 +217,7 @@ export function WorkWorkspace() {
                 promptTokens: data.usage.promptTokens,
                 completionTokens: data.usage.completionTokens,
                 providerCostUsd: data.usage.providerCostUsd,
-                dsrtCostUsd: data.usage.dsrtCostUsd,
+                dsrtCostUsd: data.dsrtCostUsd,
                 qualityOverall: data.qualityOverall,
                 verificationPassed: data.verificationPassed,
                 fallbackUsed: data.fallbackUsed,
@@ -199,108 +229,116 @@ export function WorkWorkspace() {
         }
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      getTracker()?.fail(msg);
-      setCurrentState(`FAILED: ${msg}`);
+      if ((err as Error).name === 'AbortError') {
+        setCurrentState('CANCELLED');
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        getTracker()?.fail(msg);
+        setCurrentState(`FAILED: ${msg}`);
+      }
     } finally {
       setIsStreaming(false);
+      abortRef.current = null;
     }
   };
 
-  const forkToWarMode = (prompt: string) => {
-    const params = new URLSearchParams({ prompt, provider, model });
-    router.push(`/war?${params.toString()}`);
-  };
+  const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex flex-col h-full bg-white relative">
-      {/* Settings Bar synchronized visually with WarWorkspace */}
-      <div className="border-b border-border bg-white px-4 md:px-6 py-3 flex items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-4 min-w-0">
-          <WorkMark className="h-6 text-foreground w-auto shrink-0" />
-          <ModelSelector
-            provider={provider}
-            model={model}
-            onProviderChange={(p) => setProvider(p as ProviderType)}
-            onModelChange={setModel}
-            configuredProviders={configuredProviders}
-          />
-        </div>
-
-        {messages.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-secondary mr-2">
-              <Sparkles className="w-3 h-3 inline mr-1" />
-              {messages.length} messages
-            </span>
-            <button className="p-1.5 text-secondary hover:text-foreground hover:bg-workspace rounded-md transition" title="Archive Chat">
-              <Archive size={16} />
-            </button>
-            <button className="p-1.5 text-secondary hover:text-error hover:bg-red-50 rounded-md transition" title="Delete Chat">
-              <Trash2 size={16} />
-            </button>
+    <div className="flex flex-col h-full bg-bg">
+      {/* Model bar */}
+      <div className="shrink-0 border-b border-border px-4 md:px-6 py-2.5 flex items-center justify-between gap-3">
+        <ModelSelector
+          provider={provider}
+          model={model}
+          onProviderChange={(p) => setProvider(p as ProviderType)}
+          onModelChange={setModel}
+          configuredProviders={configuredProviders}
+        />
+        {hasMessages && (
+          <div className="text-[10px] font-mono text-text-faint">
+            {messages.length} messages
           </div>
         )}
       </div>
 
-      <div className="flex-1 flex flex-col relative overflow-hidden bg-workspace">
-        {messages.length === 0 ? (
-          <EmptyState
-            onNewChat={() => {
-              setConversationId(null);
-              setMessages([]);
-              router.push('/work');
-            }}
-            onOpenWar={() => router.push('/war')}
-          />
+      {/* Conversation */}
+      <div className="flex-1 overflow-y-auto">
+        {!hasMessages ? (
+          <EmptyState onPromptClick={(prompt) => setInputMessage(prompt)} />
         ) : (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-8 max-w-[1200px] mx-auto w-full">
-            {messages.map((m) => {
+          <div className="max-w-[760px] mx-auto w-full px-4 md:px-6 py-8 space-y-7">
+            {messages.map((m, idx) => {
               const isAssistant = m.role === 'assistant';
+              const isLast = idx === messages.length - 1;
               return (
-                <div key={m.id} className={`flex flex-col group ${isAssistant ? 'items-start' : 'items-end'}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-5 py-4 shadow-sm border ${
-                    isAssistant
-                      ? 'bg-white border-border text-foreground'
-                      : 'bg-foreground border-foreground text-white'
-                  }`}>
+                <div key={m.id} className="group flex gap-3 md:gap-4 dsrt-fade">
+                  <div className="shrink-0 pt-0.5">
                     {isAssistant ? (
-                      <MarkdownRenderer
-                        content={m.content}
-                        isStreaming={isStreaming && m.id === messages[messages.length - 1]?.id}
-                      />
+                      <div className="h-7 w-7 rounded-md bg-panel border border-border flex items-center justify-center">
+                        <DsrtLogo size={16} />
+                      </div>
                     ) : (
-                      <div className="whitespace-pre-wrap text-sm">{m.content}</div>
+                      <div className="h-7 w-7 rounded-md bg-panel border border-border-strong flex items-center justify-center text-[11px] font-semibold text-text">
+                        Y
+                      </div>
                     )}
                   </div>
 
-                  <div className={`flex items-center gap-2 mt-2 px-1 ${isAssistant ? 'self-start' : 'self-end flex-row-reverse'}`}>
-                    <MessageActions
-                      content={m.content}
-                      isAssistant={isAssistant}
-                      onShowMetrics={() => setIsMetricsOpen(true)}
-                    />
-                    {!isAssistant && (
-                      <button
-                        type="button"
-                        onClick={() => forkToWarMode(m.content)}
-                        className="opacity-0 group-hover:opacity-100 flex items-center gap-1 text-[11px] text-secondary hover:text-accent transition-opacity ml-2"
-                        title="Fork prompt to War Mode"
-                      >
-                        <Swords className="w-3 h-3" /> Fork to War Mode
-                      </button>
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-[12px] font-semibold text-text">
+                        {isAssistant ? 'Dsrt AI' : 'You'}
+                      </span>
+                      {isAssistant && m.is_amplified && (
+                        <span className="text-[9px] font-mono uppercase tracking-wider text-text-faint border border-border rounded px-1.5 py-[1px]">
+                          Amplified
+                        </span>
+                      )}
+                    </div>
+
+                    {isAssistant ? (
+                      <MarkdownRenderer
+                        content={m.content}
+                        isStreaming={isStreaming && isLast}
+                      />
+                    ) : (
+                      <div className="text-[14px] text-text whitespace-pre-wrap leading-relaxed break-words">
+                        {m.content}
+                      </div>
                     )}
+
+                    {isAssistant && !isStreaming && m.latency_ms > 0 && (
+                      <div className="flex items-center gap-2 mt-2 text-[10px] font-mono text-text-faint">
+                        <span>
+                          {m.token_count_prompt + m.token_count_completion} tok
+                        </span>
+                        <span>·</span>
+                        <span>${m.provider_cost_usd.toFixed(6)}</span>
+                        <span>·</span>
+                        <span>{m.latency_ms}ms</span>
+                      </div>
+                    )}
+
+                    <div className="mt-2">
+                      <MessageActions
+                        content={m.content}
+                        isAssistant={isAssistant}
+                        onShowMetrics={() => setIsMetricsOpen(true)}
+                      />
+                    </div>
                   </div>
                 </div>
               );
             })}
-            <div ref={chatEndRef} className="h-4" />
+            <div ref={chatEndRef} className="h-8" />
           </div>
         )}
       </div>
 
-      <div className="border-t border-border bg-white px-4 py-4 shrink-0 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
-        <div className="max-w-[1200px] mx-auto space-y-2 relative">
+      {/* Composer */}
+      <div className="shrink-0 px-4 md:px-6 pb-5 pt-2">
+        <div className="max-w-[760px] mx-auto w-full space-y-2">
           <StreamingStatusBar
             state={currentState}
             isStreaming={isStreaming}
@@ -308,8 +346,21 @@ export function WorkWorkspace() {
             fallbackUsed={snapshot?.fallbackUsed}
             modelLabel={`${provider}/${model}`}
           />
-          <form onSubmit={handleSend} className="relative flex items-center shadow-sm">
+
+          <form
+            onSubmit={handleSend}
+            className="relative flex items-end bg-input border border-border rounded-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.02)] focus-within:border-border-hover transition-colors"
+          >
+            <button
+              type="button"
+              className="shrink-0 h-10 w-10 flex items-center justify-center text-text-muted hover:text-text transition-colors"
+              title="Attach"
+            >
+              <Plus size={16} strokeWidth={1.8} />
+            </button>
+
             <textarea
+              ref={textareaRef}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={(e) => {
@@ -318,21 +369,45 @@ export function WorkWorkspace() {
                   void handleSend(e);
                 }
               }}
-              placeholder="Message DSRT Amplification... (⌘ + Enter to send)"
-              rows={2}
-              className="w-full pl-4 pr-16 py-3 bg-workspace border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent resize-none placeholder:text-secondary"
+              placeholder="Ask Dsrt AI"
+              rows={1}
               disabled={isStreaming}
+              className="flex-1 bg-transparent px-1 py-3 pr-2 text-[14px] text-text placeholder:text-text-dim focus:outline-none resize-none max-h-[200px] leading-relaxed"
             />
-            <div className="absolute right-3 bottom-3 flex items-center gap-1">
+
+            <div className="shrink-0 flex items-center gap-1 pr-2 pb-2">
               <button
-                type="submit"
-                disabled={!inputMessage.trim() || isStreaming}
-                className="p-2 bg-accent hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-accent text-white rounded-lg transition-colors shadow-sm"
+                type="button"
+                className="h-8 w-8 flex items-center justify-center text-text-muted hover:text-text rounded-md transition-colors"
+                title="Voice"
               >
-                <Send className="w-4 h-4" />
+                <Mic size={14} strokeWidth={1.8} />
               </button>
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onClick={stopStreaming}
+                  className="h-8 w-8 flex items-center justify-center rounded-full bg-text text-bg hover:bg-accent-hover transition-colors"
+                  title="Stop"
+                >
+                  <Square size={12} strokeWidth={2.5} fill="currentColor" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!inputMessage.trim()}
+                  className="h-8 w-8 flex items-center justify-center rounded-full bg-text text-bg disabled:bg-panel disabled:text-text-faint disabled:cursor-not-allowed hover:bg-accent-hover transition-colors"
+                  title="Send"
+                >
+                  <ArrowUp size={14} strokeWidth={2.2} />
+                </button>
+              )}
             </div>
           </form>
+
+          <div className="text-[10px] text-text-faint text-center">
+            Dsrt AI can make mistakes. Verify important outputs.
+          </div>
         </div>
       </div>
 

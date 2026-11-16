@@ -1,52 +1,50 @@
-/**
- * Production Input Sanitizer & Prompt Injection Shield
- */
-
-export interface SanitizationResult {
+export interface SanitizeResult {
   cleanPrompt: string;
-  hasSystemInjection: boolean;
-  tokenEstimate: number;
-  warnings: string[];
+  flagged: boolean;
+  flags: string[];
 }
 
-export function sanitizeUserInput(input: string, maxCharacters = 32000): SanitizationResult {
-  const warnings: string[] = [];
-  if (!input) {
-    return { cleanPrompt: '', hasSystemInjection: false, tokenEstimate: 0, warnings: [] };
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?previous\s+instructions/i,
+  /you\s+are\s+now\s+(?:a|an)\s+(?:evil|malicious|unrestricted)/i,
+  /system\s*:\s*you\s+are/i,
+  /\[INST\]/i,
+  /\[\/INST\]/i,
+  /<\|im_start\|>/i,
+  /<\|im_end\|>/i,
+  /<<SYS>>/i,
+  /\bDAN\b.*\bmode\b/i,
+  /do\s+anything\s+now/i,
+  /jailbreak/i,
+];
+
+export function sanitizeUserInput(rawInput: string): SanitizeResult {
+  if (!rawInput || typeof rawInput !== 'string') {
+    return { cleanPrompt: '', flagged: false, flags: [] };
   }
 
-  let truncated = input;
-  if (input.length > maxCharacters) {
-    truncated = input.slice(0, maxCharacters);
-    warnings.push(`Input truncated from ${input.length} to ${maxCharacters} characters.`);
-  }
+  let cleanPrompt = rawInput.trim();
+  const flags: string[] = [];
 
-  const injectionPatterns = [
-    /ignore\s+all\s+previous\s+instructions/gi,
-    /disregard\s+prior\s+system\s+prompts/gi,
-    /you\s+are\s+now\s+in\s+DAN\s+mode/gi,
-    /jailbreak/gi,
-  ];
-
-  let hasSystemInjection = false;
-  for (const pattern of injectionPatterns) {
-    if (pattern.test(truncated)) {
-      hasSystemInjection = true;
-      warnings.push('Potential prompt injection pattern detected and neutralized.');
-      break;
+  // Check for injection patterns
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(cleanPrompt)) {
+      flags.push(`injection_pattern:${pattern.source.slice(0, 30)}`);
     }
   }
 
-  const cleanPrompt = truncated
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
-    .trim();
+  // Strip control characters (keep newlines and tabs)
+  cleanPrompt = cleanPrompt.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
-  const tokenEstimate = Math.ceil(cleanPrompt.length / 4);
+  // Limit length (100K chars)
+  if (cleanPrompt.length > 100_000) {
+    cleanPrompt = cleanPrompt.slice(0, 100_000);
+    flags.push('truncated:100000');
+  }
 
   return {
     cleanPrompt,
-    hasSystemInjection,
-    tokenEstimate,
-    warnings,
+    flagged: flags.length > 0,
+    flags,
   };
 }

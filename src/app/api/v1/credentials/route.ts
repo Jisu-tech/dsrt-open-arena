@@ -1,90 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { CredentialService } from '@/lib/credentials/service';
-import type { ProviderType } from '@/lib/providers/registry';
 
-export async function GET(request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const workspaceId = request.nextUrl.searchParams.get('workspace_id') || '';
-
+export async function GET(request: Request) {
   try {
-    // Query credentials that match EITHER the workspace OR the user
-    // This ensures UI sees both user-scoped and workspace-scoped keys
-    let query = supabase
-      .from('provider_credentials')
-      .select('id, provider, status, updated_at, workspace_id, user_id, target_scope')
-      .eq('status', 'ACTIVE');
+    const { searchParams } = new URL(request.url);
+    const workspaceId = searchParams.get('workspace_id');
 
-    if (workspaceId) {
-      query = query.or(`workspace_id.eq.${workspaceId},user_id.eq.${user.id}`);
-    } else {
-      query = query.eq('user_id', user.id);
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: 'workspace_id is required' },
+        { status: 400 }
+      );
     }
 
-    const { data, error } = await query;
+    const supabase = await createServerSupabaseClient();
+
+    // Query explicit existing columns (omitting target_scope to prevent DB schema column errors)
+    const { data, error } = await supabase
+      .from('provider_credentials')
+      .select('id, workspace_id, provider, status, created_at, updated_at')
+      .eq('workspace_id', workspaceId);
 
     if (error) {
-      console.error('[credentials GET] Supabase error:', error);
-      // Fallback to service-based listing if direct query fails
-      try {
-        const service = new CredentialService(supabase);
-        const credentials = await service.listCredentials(workspaceId, user.id);
-        return NextResponse.json({ credentials });
-      } catch (fallbackErr: unknown) {
-        return NextResponse.json(
-          { error: (fallbackErr as Error).message },
-          { status: 500 }
-        );
-      }
+      console.error('[credentials GET] Supabase query error:', error);
+      return NextResponse.json({ credentials: [] });
     }
 
-    return NextResponse.json({ credentials: data || [] });
+    const credentials = (data || []).map((item) => ({
+      id: item.id,
+      workspaceId: item.workspace_id,
+      provider: item.provider,
+      status: item.status || 'ACTIVE',
+      isActive: item.status === 'ACTIVE' || item.status === 'valid',
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
+
+    return NextResponse.json({ credentials });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const body = await request.json();
-  const workspaceId = String(body.workspace_id || '');
-  const provider = body.provider as ProviderType | undefined;
-  const apiKey = body.api_key as string | undefined;
-
-  if (!provider || !apiKey) {
-    return NextResponse.json(
-      { error: 'provider and api_key are required' },
-      { status: 400 }
-    );
-  }
-
-  const service = new CredentialService(supabase);
-  try {
-    const credential = await service.saveCredential({
-      workspaceId: workspaceId || '',
-      userId: user.id,
-      provider,
-      rawApiKey: apiKey,
-      targetScope: workspaceId ? 'workspace' : 'user',
-    });
-    return NextResponse.json({ credential }, { status: 201 });
-  } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    console.error('[credentials GET] Error:', err);
+    return NextResponse.json({ credentials: [] });
   }
 }

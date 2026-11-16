@@ -26,40 +26,28 @@ export function MessageActions({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // clipboard blocked
+      /* clipboard blocked */
     }
   };
 
+  const btn =
+    'p-1.5 rounded-md text-text-faint hover:text-text hover:bg-panel-hover transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100';
+
   return (
-    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="p-1.5 rounded-md text-secondary hover:text-foreground hover:bg-workspace transition-colors"
-        title="Copy"
-      >
-        {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+    <div className="flex items-center gap-0.5 -ml-1.5">
+      <button type="button" onClick={handleCopy} className={btn} title="Copy">
+        {copied ? <Check size={13} strokeWidth={2} className="text-success" /> : <Copy size={13} strokeWidth={1.8} />}
       </button>
-      
+
       {isAssistant && onRegenerate && (
-        <button
-          type="button"
-          onClick={onRegenerate}
-          className="p-1.5 rounded-md text-secondary hover:text-foreground hover:bg-workspace transition-colors"
-          title="Regenerate"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
+        <button type="button" onClick={onRegenerate} className={btn} title="Regenerate">
+          <RotateCcw size={13} strokeWidth={1.8} />
         </button>
       )}
 
       {isAssistant && onShowMetrics && (
-        <button
-          type="button"
-          onClick={onShowMetrics}
-          className="p-1.5 rounded-md text-secondary hover:text-accent hover:bg-blue-50 transition-colors"
-          title="Metrics"
-        >
-          <BarChart3 className="w-3.5 h-3.5" />
+        <button type="button" onClick={onShowMetrics} className={btn} title="Metrics">
+          <BarChart3 size={13} strokeWidth={1.8} />
         </button>
       )}
 
@@ -67,10 +55,10 @@ export function MessageActions({
         <button
           type="button"
           onClick={onDeleteMessage}
-          className="p-1.5 rounded-md text-secondary hover:text-error hover:bg-red-50 transition-colors"
-          title="Delete message"
+          className={`${btn} hover:text-error hover:bg-error-bg`}
+          title="Delete"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 size={13} strokeWidth={1.8} />
         </button>
       )}
     </div>
